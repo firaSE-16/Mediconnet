@@ -31,6 +31,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Stepper } from "@/components/stepper";
 import { BASE_URL } from "@/lib/utils";
 import ImageUpload from "@/components/ImageUpload";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const hospitalSchema = z.object({
   name: z.string()
@@ -45,7 +46,8 @@ const hospitalSchema = z.object({
   licenseNumber: z.string()
     .min(1, "License number is required")
     .max(50, "License number must be less than 50 characters"),
-  licenseImage: z.string().min(1, "License image is required")
+  licenseImage: z.string().min(1, "License image is required"),
+  isInOurSystem: z.boolean().default(false)
 });
 
 export default function AddHospital() {
@@ -60,6 +62,7 @@ export default function AddHospital() {
       contactNumber: "",
       licenseNumber: "",
       licenseImage: "",
+      isInOurSystem: false,
     },
   });
 
@@ -75,7 +78,9 @@ export default function AddHospital() {
           location: values.location,
           contactNumber: values.contactNumber,
           licenseNumber: values.licenseNumber,
-          licenseImage: values.licenseImage
+          licenseImage: values.licenseImage,
+          isInOurSystem: values.isInOurSystem,
+          secreteKey: values.isInOurSystem ? generateSecreteKey() : undefined
         },
         { 
           withCredentials: true,
@@ -90,7 +95,12 @@ export default function AddHospital() {
           position: "top-center",
           autoClose: 5000,
         });
-        navigate(`/admin/admin-management/${response.data.hospital.id}/add-admin`);
+        
+        if(values.isInOurSystem) {
+          navigate(`/admin/admin-management/${response.data.hospital.id}/add-admin`);
+        } else {
+          navigate(`/admin/hospital-detail/${response.data.hospital.id}`);
+        }
       } else {
         throw new Error("Invalid response from server");
       }
@@ -103,6 +113,12 @@ export default function AddHospital() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Function to generate a random secrete key
+  const generateSecreteKey = () => {
+    return Math.random().toString(36).substring(2, 15) + 
+           Math.random().toString(36).substring(2, 15);
   };
 
   return (
@@ -234,6 +250,30 @@ export default function AddHospital() {
                         />
                       </FormControl>
                       <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="isInOurSystem"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2 flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          This hospital is part of our system
+                        </FormLabel>
+                        <FormDescription>
+                          Check this box if the hospital will be using our platform directly.
+                          This will allow you to add administrators for the hospital.
+                        </FormDescription>
+                      </div>
                     </FormItem>
                   )}
                 />

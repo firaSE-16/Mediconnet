@@ -3,7 +3,10 @@ const bcrypt = require("bcrypt");
 const Hospital = require("../models/Hospital");
 const HospitalAdministrator = require("../models/HospitalAdministrator");
 const User = require("../models/user");
-
+const crypto = require('crypto');
+function generateSecretKey() {
+  return crypto.randomBytes(32).toString('hex');
+}
 // Register a new hospital
 const registerHospital = async (req, res) => {
   try {
@@ -12,7 +15,7 @@ const registerHospital = async (req, res) => {
       return res.status(403).json({ msg: "Only system admins can add hospitals" });
     }
 
-    const { name, location, contactNumber, licenseNumber, licenseImage } = req.body;
+    const { name, location, contactNumber, licenseNumber, licenseImage,isInOurSystem } = req.body;
 
     // Validate required fields
     if (!name || !location || !contactNumber || !licenseNumber || !licenseImage) {
@@ -25,6 +28,9 @@ const registerHospital = async (req, res) => {
       return res.status(400).json({ msg: "Hospital with this license number already exists" });
     }
 
+     const secreteKey = generateSecretKey();
+
+
     // Create new hospital
     const newHospital = new Hospital({
       name,
@@ -32,6 +38,8 @@ const registerHospital = async (req, res) => {
       contactNumber,
       licenseNumber,
       licenseImage,
+      secreteKey,
+      isInOurSystem,
       status: "active" // Default status
     });
 
@@ -190,10 +198,13 @@ const getHospitalDetails = async (req, res) => {
     }
 
     const hospital = await Hospital.findById(id);
+
+
     if (!hospital) {
       return res.status(404).json({ msg: "Hospital not found" });
     }
 
+    if(hospital.isInOurSystem){
     // Get all staff for this hospital (excluding system Admins)
     const staff = await User.aggregate([
       {
@@ -242,6 +253,10 @@ const getHospitalDetails = async (req, res) => {
       roleCounts,
       totalStaff: staff.length
     });
+    } else{
+      res.status(200).json({
+      hospital,})
+}
 
   } catch (error) {
     console.error("Get hospital details error:", error);
@@ -268,7 +283,8 @@ const getStaffDetails = async (req, res) => {
     console.error("Get staff details error:", error);
     res.status(500).json({ msg: "Server error fetching staff details" });
   }
-};
+}
+
 
 
 // Delete hospital admin

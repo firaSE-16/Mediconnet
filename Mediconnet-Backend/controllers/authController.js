@@ -82,6 +82,7 @@ const signup = async (req, res) => {
  
 
 const login = async (req, res) => {
+
   try {
     const { email, password, role } = req.body;
  

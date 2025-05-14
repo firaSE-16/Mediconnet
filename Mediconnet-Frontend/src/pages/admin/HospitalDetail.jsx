@@ -13,7 +13,7 @@ import {
   ArrowLeft, MoreVertical, Building2, MapPin, Phone, Mail, 
   Calendar, ShieldCheck, FileText, Users, Activity, Clock, UserCog,
   PieChart as PieChartIcon, Stethoscope, ClipboardList, User2,
-  ClipboardCheck, FlaskConical, Pill, Search
+  ClipboardCheck, FlaskConical, Pill, Search, Key, Copy
 } from "lucide-react"
 import axios from "axios"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -22,6 +22,7 @@ import { BASE_URL, formatDate, getTimeSince } from "@/lib/utils"
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { toast } from "@/components/ui/use-toast"
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#FF6384', '#36A2EB'];
 
@@ -54,6 +55,7 @@ const HospitalDetail = () => {
   const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [roleFilter, setRoleFilter] = useState("all")
+  const [isInOurSystem, setIsInOurSystem] = useState(false)
 
   useEffect(() => {
     const fetchHospitalDetails = async () => {
@@ -63,11 +65,12 @@ const HospitalDetail = () => {
           withCredentials: true
         })
         
-        const { hospital, staffByRole, roleCounts } = response.data
+        const { hospital, staffByRole, roleCounts, isInOurSystem } = response.data
         
         setHospital(hospital)
-        setStaffByRole(staffByRole)
-        setRoleCounts(roleCounts)
+        setStaffByRole(staffByRole || {})
+        setRoleCounts(roleCounts || {})
+        setIsInOurSystem(isInOurSystem)
         
       } catch (err) {
         console.error("Error fetching hospital details:", err)
@@ -100,6 +103,15 @@ const HospitalDetail = () => {
     return staff
   }
 
+  const copySecretKey = () => {
+    navigator.clipboard.writeText(hospital.secretKey)
+    toast({
+      title: "Copied!",
+      description: "Secret key copied to clipboard",
+      duration: 2000,
+    })
+  }
+
   if (loading) return <LoadingSkeleton />
   if (error) return <ErrorDisplay error={error} navigate={navigate} />
   if (!hospital) return <NotFound navigate={navigate} />
@@ -112,7 +124,8 @@ const HospitalDetail = () => {
 
   // Get active staff count
   const activeStaffCount = Object.values(staffByRole).flat().filter(s => s.status === "active").length
-  const activeStaffPercentage = Math.round((activeStaffCount / (Object.values(roleCounts).reduce((a, b) => a + b, 0)) * 100))
+  const activeStaffPercentage = isInOurSystem ? 
+    Math.round((activeStaffCount / (Object.values(roleCounts).reduce((a, b) => a + b, 0)) * 100) : 0
 
   return (
     <div className="p-6 space-y-6">
@@ -131,174 +144,208 @@ const HospitalDetail = () => {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button 
-            onClick={() => navigate(`/admin/admin-management/${id}/add-admin`)}
-            className="flex items-center gap-2"
-          >
-            <UserCog className="h-4 w-4" />
-            Add Admin
-          </Button>
+          {isInOurSystem && (
+            <Button 
+              onClick={() => navigate(`/admin/admin-management/${id}/add-admin`)}
+              className="flex items-center gap-2"
+            >
+              <UserCog className="h-4 w-4" />
+              Add Admin
+            </Button>
+          )}
           <Badge variant={hospital.status === "active" ? "default" : "destructive"}>
             {hospital.status || "active"}
           </Badge>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard 
-          title="Total Staff" 
-          value={Object.values(roleCounts).reduce((a, b) => a + b, 0)} 
-          icon={<Users className="h-5 w-5" />} 
-          color="blue"
-        />
-        <StatCard 
-          title="Doctors" 
-          value={roleCounts.Doctor || 0} 
-          icon={<Stethoscope className="h-5 w-5" />} 
-          color="green"
-        />
-        <StatCard 
-          title="Admins" 
-          value={roleCounts.HospitalAdministrator || 0} 
-          icon={<UserCog className="h-5 w-5" />} 
-          color="purple"
-        />
-        <StatCard 
-          title="Active Staff" 
-          value={`${activeStaffPercentage}%`} 
-          icon={<ShieldCheck className="h-5 w-5" />} 
-          color="orange"
-        />
-      </div>
-
-      {/* Main Content Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="w-full justify-start">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="staff">Staff</TabsTrigger>
-          <TabsTrigger value="roles">Roles Breakdown</TabsTrigger>
-        </TabsList>
-
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <HospitalInfoCard hospital={hospital} />
-            <RecentActivityCard staff={Object.values(staffByRole).flat().slice(0, 5)} navigate={navigate} />
-          </div>
-          
-          {/* Role Distribution Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <PieChartIcon className="h-5 w-5" />
-                Staff Role Distribution
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="h-[300px]">
-              {roleData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={roleData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {roleData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-full flex items-center justify-center text-muted-foreground">
-                  No staff data available
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Staff Tab */}
-        <TabsContent value="staff" className="space-y-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search staff..."
-                className="pl-9"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+      {/* Secret Key Section */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Key className="h-5 w-5 text-yellow-500" />
+              <CardTitle>Hospital Secret Key</CardTitle>
             </div>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                {Object.keys(roleCounts).map(role => (
-                  <SelectItem key={role} value={role}>{role}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={copySecretKey}
+              className="flex items-center gap-2"
+            >
+              <Copy className="h-4 w-4" />
+              Copy
+            </Button>
           </div>
-          <StaffTable 
-            staff={filteredStaff()} 
-            hospitalName={hospital.name}
-            navigate={navigate}
-          />
-        </TabsContent>
+        </CardHeader>
+        <CardContent>
+          <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-md">
+            <code className="font-mono text-sm break-all">{hospital.secretKey}</code>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Roles Breakdown Tab */}
-        <TabsContent value="roles" className="space-y-4">
-          {Object.entries(staffByRole).map(([role, staff]) => (
-            <Card key={role}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  {roleIcons[role] || <User2 className="h-5 w-5" />}
-                  {role} ({staff.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {staff.map(member => (
-                    <div 
-                      key={member._id} 
-                      className="flex items-center gap-3 hover:bg-gray-50 p-2 rounded-lg cursor-pointer"
-                      onClick={() => navigate(`/system-admin/staff-management/${member._id}`)}
-                    >
-                      <Avatar className="h-9 w-9">
-                        {member.profilePicture && <AvatarImage src={member.profilePicture} />}
-                        <AvatarFallback>
-                          {member.firstName.charAt(0)}{member.lastName.charAt(0)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">
-                          {member.firstName} {member.lastName}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {member.email}
-                        </p>
-                      </div>
-                      <Badge variant="outline" className={`capitalize ${roleColors[role]}`}>
-                        {member.status}
-                      </Badge>
+      {isInOurSystem ? (
+        <>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard 
+              title="Total Staff" 
+              value={Object.values(roleCounts).reduce((a, b) => a + b, 0)} 
+              icon={<Users className="h-5 w-5" />} 
+              color="blue"
+            />
+            <StatCard 
+              title="Doctors" 
+              value={roleCounts.Doctor || 0} 
+              icon={<Stethoscope className="h-5 w-5" />} 
+              color="green"
+            />
+            <StatCard 
+              title="Admins" 
+              value={roleCounts.HospitalAdministrator || 0} 
+              icon={<UserCog className="h-5 w-5" />} 
+              color="purple"
+            />
+            <StatCard 
+              title="Active Staff" 
+              value={`${activeStaffPercentage}%`} 
+              icon={<ShieldCheck className="h-5 w-5" />} 
+              color="orange"
+            />
+          </div>
+
+          {/* Main Content Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className="w-full justify-start">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="staff">Staff</TabsTrigger>
+              <TabsTrigger value="roles">Roles Breakdown</TabsTrigger>
+            </TabsList>
+
+            {/* Overview Tab */}
+            <TabsContent value="overview" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <HospitalInfoCard hospital={hospital} />
+                <RecentActivityCard staff={Object.values(staffByRole).flat().slice(0, 5)} navigate={navigate} />
+              </div>
+              
+              {/* Role Distribution Chart */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <PieChartIcon className="h-5 w-5" />
+                    Staff Role Distribution
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="h-[300px]">
+                  {roleData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={roleData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        >
+                          {roleData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-muted-foreground">
+                      No staff data available
                     </div>
-                  ))}
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Staff Tab */}
+            <TabsContent value="staff" className="space-y-4">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search staff..."
+                    className="pl-9"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </TabsContent>
-      </Tabs>
+                <Select value={roleFilter} onValueChange={setRoleFilter}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filter by role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Roles</SelectItem>
+                    {Object.keys(roleCounts).map(role => (
+                      <SelectItem key={role} value={role}>{role}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <StaffTable 
+                staff={filteredStaff()} 
+                hospitalName={hospital.name}
+                navigate={navigate}
+              />
+            </TabsContent>
+
+            {/* Roles Breakdown Tab */}
+            <TabsContent value="roles" className="space-y-4">
+              {Object.entries(staffByRole).map(([role, staff]) => (
+                <Card key={role}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      {roleIcons[role] || <User2 className="h-5 w-5" />}
+                      {role} ({staff.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {staff.map(member => (
+                        <div 
+                          key={member._id} 
+                          className="flex items-center gap-3 hover:bg-gray-50 p-2 rounded-lg cursor-pointer"
+                          onClick={() => navigate(`/system-admin/staff-management/${member._id}`)}
+                        >
+                          <Avatar className="h-9 w-9">
+                            {member.profilePicture && <AvatarImage src={member.profilePicture} />}
+                            <AvatarFallback>
+                              {member.firstName.charAt(0)}{member.lastName.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">
+                              {member.firstName} {member.lastName}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {member.email}
+                            </p>
+                          </div>
+                          <Badge variant="outline" className={`capitalize ${roleColors[role]}`}>
+                            {member.status}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </TabsContent>
+          </Tabs>
+        </>
+      ) : (
+        <HospitalDetailsCard hospital={hospital} />
+      )}
     </div>
   )
 }

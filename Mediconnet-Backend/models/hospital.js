@@ -5,6 +5,8 @@ const hospitalSchema = new Schema({
     name: { type: String, required: true },
     location: { type: String, required: true },
     contactNumber: { type: String, required: true },
+    secreteKey: { type: String, required: true },
+    isInOurSystem: { type: Boolean, default: false },
     licenseImage: {
         type: String,
         required: true
