@@ -4,6 +4,8 @@ const LabRequest = require("../models/LabRequest");
 const Prescription = require("../models/Prescription");
 const Doctor = require("../models/Doctor");
 const mongoose = require("mongoose");
+const axios = require("axios");
+const CenteralPatientHistory = require("../models/CenteralPatientHistory");
 // ==================== DOCTOR PROFILE ====================
 
 /**
@@ -327,10 +329,7 @@ const getPatientMedicalHistory = async (req, res) => {
     .populate('triageData.staffID', 'firstName lastName role')
     .populate({
       path: 'doctorNotes.prescriptions',
-      populate: {
-        path: 'medicineList.medicine',
-        model: 'Medicine'
-      }
+      
     })
     .populate('labRequests')
     .lean();
@@ -515,13 +514,119 @@ const getMedicalRecord = async (req, res) => {
       error: error.message
     });
   }
-};/**
- * Create/update medical record
- */
+};
+
+
+const syncToCentralPatientHistory = async (record) => {
+  try {
+    const { _id: recordId } = record;
+    console.log("Syncing record to central patient history:", recordId);
+
+    const medicalRecord = await MedicalRecord.findById(recordId)
+      .populate('patientID', 'faydaID firstName lastName dateOfBirth gender bloodGroup')
+      .populate('hospitalID', 'secreteKey')
+      .populate({
+        path: 'doctorNotes.prescriptions',
+        populate: {
+          path: 'doctorID',
+          select: 'firstName lastName'
+        }
+      })
+      .populate({
+        path: 'doctorNotes.prescriptions',
+        populate: {
+          path: 'medicineList' // Not needed unless medicineList references another model, which it doesn't in your schema
+        }
+      })
+      .populate('labRequests');
+
+    if (!medicalRecord) {
+      throw new Error('Medical record not found');
+    }
+
+    const patient = medicalRecord.patientID;
+    const hospital = medicalRecord.hospitalID;
+
+    // Extract prescriptions
+    const prescriptions = (medicalRecord.doctorNotes?.prescriptions || []).flatMap(prescription => {
+      return (prescription.medicineList || []).map(med => ({
+        medicationName: med.name,
+        dosage: med.dosage,
+        frequency: med.frequency,
+        duration: med.duration,
+      }));
+    });
+
+    // Extract lab results
+    const labResults = (medicalRecord.labRequests || []).map(request => ({
+      testName: request.testType,
+      result: request.results?.testValue || '',
+      date: request.results?.completedDate || request.completionDate || new Date(),
+    }));
+
+    const newRecord = {
+      hospitalID: hospital._id.toString(),
+      doctorNotes: {
+        diagnosis: medicalRecord.doctorNotes?.diagnosis || '',
+        treatmentPlan: medicalRecord.doctorNotes?.treatmentPlan || '',
+        prescriptions,
+      },
+      labResults,
+    };
+
+    const payload = {
+      faydaID: patient.faydaID,
+      firstName: patient.firstName,
+      lastName: patient.lastName,
+      dateOfBirth: patient.dateOfBirth,
+      gender: patient.gender,
+      bloodGroup: patient.bloodGroup || null,
+      records: [newRecord],
+    };
+    console.log(newRecord);
+
+    let responseData;
+    const existingPatient = await CenteralPatientHistory.findOne({ faydaID: patient.faydaID });
+
+    if (!existingPatient) {
+      responseData = await CenteralPatientHistory.create(payload);
+    } else {
+      existingPatient.records.push(newRecord);
+      responseData = await existingPatient.save();
+    }
+
+    await MedicalRecord.findByIdAndUpdate(recordId, {
+      syncedToCentral: true,
+      lastSyncedAt: new Date(),
+    });
+
+    return {
+      success: true,
+      message: 'Successfully synced to central patient history',
+      centralResponse: responseData,
+    };
+  } catch (error) {
+    console.error('Error in syncToCentralPatientHistory:', error);
+    return {
+      success: false,
+      message: error?.response?.data?.error || 'Failed to sync to central patient history',
+      error: error.message,
+    };
+  }
+};
+
+
+
+
+
+
+
+
+
 const updateMedicalRecord = async (req, res) => {
   try {
     const { recordId } = req.params;
-
+ 
     const doctorId = req.user?._id;
     const { diagnosis, treatmentPlan, vitals } = req.body;
 
@@ -561,6 +666,7 @@ const updateMedicalRecord = async (req, res) => {
         message: "Record not found or unauthorized" 
       });
     }
+    syncToCentralPatientHistory(record);
 
     res.status(200).json({ 
       success: true,
@@ -574,13 +680,9 @@ const updateMedicalRecord = async (req, res) => {
       message: "Server error updating record" 
     });
   }
-};
+}
 
-// ==================== LAB REQUESTS ====================
 
-/**
- * Create new lab request
- */
 const createLabRequest = async (req, res) => {
   try {
     const { recordId } = req.params;
@@ -808,6 +910,7 @@ module.exports = {
   getPatientProfile,
   startTreatment,
   
+  syncToCentralPatientHistory,
   // Medical Records
   getPatientMedicalHistory,
   getMedicalRecord,

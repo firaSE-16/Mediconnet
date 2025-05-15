@@ -22,7 +22,6 @@ import { BASE_URL, formatDate, getTimeSince } from "@/lib/utils"
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { toast } from "@/components/ui/use-toast"
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#FF6384', '#36A2EB'];
 
@@ -105,11 +104,8 @@ const HospitalDetail = () => {
 
   const copySecretKey = () => {
     navigator.clipboard.writeText(hospital.secretKey)
-    toast({
-      title: "Copied!",
-      description: "Secret key copied to clipboard",
-      duration: 2000,
-    })
+    
+    
   }
 
   if (loading) return <LoadingSkeleton />
@@ -125,7 +121,7 @@ const HospitalDetail = () => {
   // Get active staff count
   const activeStaffCount = Object.values(staffByRole).flat().filter(s => s.status === "active").length
   const activeStaffPercentage = isInOurSystem ? 
-    Math.round((activeStaffCount / (Object.values(roleCounts).reduce((a, b) => a + b, 0)) * 100) : 0
+    Math.round((activeStaffCount / (Object.values(roleCounts).reduce((a, b) => a + b, 0)) * 100)) : 0
 
   return (
     <div className="p-6 space-y-6">

@@ -54,6 +54,19 @@ const AppRoutes = ({ userRole }) => {
           <Route path="/admin" element={<Navigate to="/admin/dashboard" />} />
         </>
       )}
+
+      {userRole === "User" && (
+        <>
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/hospital-management" element={<HospitalManagement />} />
+          <Route path="/admin/hospital-management/add-hospital" element={<AddHospital />} />
+          <Route path="/admin/hospital-detail/:id" element={<HospitalDetail />} />
+          <Route path="/admin/hospital-detail/staff/:id" element={<StaffDetail />} />
+          <Route path="/admin/admin-management/:id/add-admin" element={<AddAdmin />} />
+          <Route path="/admin/admin-management" element={<AdminManagement />} />
+          <Route path="/admin" element={<Navigate to="/admin/dashboard" />} />
+        </>
+      )}
       
       {/* Hospital Admin Routes */}
       {userRole === "HospitalAdministrator" && (
