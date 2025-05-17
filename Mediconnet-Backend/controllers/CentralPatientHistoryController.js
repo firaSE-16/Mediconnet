@@ -2,33 +2,65 @@
 const CentralPatientHistory = require('../models/CenteralPatientHistory');
 const mongoose = require('mongoose');
 
-// Register a new patient or update existing patient's records
 const updatePatientHistory = async (req, res) => {
   try {
-    const { faydaID, firstName, lastName, dateOfBirth, gender, bloodGroup, record } = req.body;
-    
+    const {
+      faydaID,
+      firstName,
+      lastName,
+      dateOfBirth,
+      gender,
+      bloodGroup,
+      records: incomingRecords, // expecting records as an array
+    } = req.body;
+
     if (!faydaID || !firstName || !lastName || !dateOfBirth || !gender) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      return res.status(400).json({ error: 'Missing required patient fields' });
     }
 
-    if (!record || !record.doctorNotes) {
-      return res.status(400).json({ error: 'Medical record data is required' });
+    if (!Array.isArray(incomingRecords) || incomingRecords.length === 0) {
+      return res.status(400).json({ error: 'Medical record(s) are required' });
     }
 
-    // Add hospital ID to the record
-    record.hospitalID = req.hospital._id;
+    // Ensure each record has required structure
+    const formattedRecords = incomingRecords.map(record => ({
+      hospitalID: record.hospitalID || null,
+      doctorNotes: {
+        diagnosis: record.doctorNotes?.diagnosis || '',
+        treatmentPlan: record.doctorNotes?.treatmentPlan || '',
+        prescriptions: [], // kept empty to avoid conflicting with prescription array below
+      },
+      labResults: Array.isArray(record.labResults)
+        ? record.labResults.map(lab => ({
+            testName: lab.testName || '',
+            result: lab.result || '',
+            date: lab.date ? new Date(lab.date) : new Date(),
+          }))
+        : [],
+      prescription: Array.isArray(record.prescriptions)
+        ? record.prescriptions.map(med => ({
+            medicationName: med.medicationName || '',
+            dosage: med.dosage || '',
+            frequency: med.frequency || '',
+            duration: med.duration || '',
+          }))
+        : [],
+    }));
 
-    // Try to find existing patient
     let patient = await CentralPatientHistory.findOne({ faydaID });
 
     if (patient) {
       // Update existing patient
-      patient.records.push(record);
+      patient.records.push(...formattedRecords);
+      patient.firstName = firstName;
+      patient.lastName = lastName;
+      patient.dateOfBirth = dateOfBirth;
+      patient.gender = gender;
       if (bloodGroup) patient.bloodGroup = bloodGroup;
       await patient.save();
-      return res.status(200).json({ 
+      return res.status(200).json({
         message: 'Patient record updated successfully',
-        patient
+        patient,
       });
     } else {
       // Create new patient
@@ -38,22 +70,22 @@ const updatePatientHistory = async (req, res) => {
         lastName,
         dateOfBirth,
         gender,
-        bloodGroup,
-        records: [record]
+        bloodGroup: bloodGroup || null,
+        records: formattedRecords,
       });
-      
+
       await patient.save();
-      return res.status(201).json({ 
+      return res.status(201).json({
         message: 'New patient record created successfully',
-        patient
+        patient,
       });
     }
   } catch (error) {
     console.error('Error updating patient history:', error);
-    if (error instanceof mongoose.Error.ValidationError) {
-      return res.status(400).json({ error: error.message });
-    }
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({
+      error: 'Internal server error',
+      details: error.message,
+    });
   }
 };
 

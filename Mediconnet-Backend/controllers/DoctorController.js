@@ -527,50 +527,40 @@ const syncToCentralPatientHistory = async (record) => {
       .populate('hospitalID', 'secreteKey')
       .populate({
         path: 'doctorNotes.prescriptions',
-        populate: {
-          path: 'doctorID',
-          select: 'firstName lastName'
-        }
-      })
-      .populate({
-        path: 'doctorNotes.prescriptions',
-        populate: {
-          path: 'medicineList' // Not needed unless medicineList references another model, which it doesn't in your schema
-        }
+        populate: { path: 'doctorID', select: 'firstName lastName' }
       })
       .populate('labRequests');
 
-    if (!medicalRecord) {
-      throw new Error('Medical record not found');
-    }
+    if (!medicalRecord) throw new Error('Medical record not found');
 
     const patient = medicalRecord.patientID;
     const hospital = medicalRecord.hospitalID;
 
-    // Extract prescriptions
-    const prescriptions = (medicalRecord.doctorNotes?.prescriptions || []).flatMap(prescription => {
-      return (prescription.medicineList || []).map(med => ({
+    // Extract raw prescription details
+    const prescriptionData = (medicalRecord.doctorNotes?.prescriptions || []).flatMap(prescription =>
+      (prescription.medicineList || []).map(med => ({
         medicationName: med.name,
         dosage: med.dosage,
         frequency: med.frequency,
         duration: med.duration,
-      }));
-    });
+      }))
+    );
 
-    // Extract lab results
+    // Extract lab request results
     const labResults = (medicalRecord.labRequests || []).map(request => ({
       testName: request.testType,
       result: request.results?.testValue || '',
       date: request.results?.completedDate || request.completionDate || new Date(),
     }));
 
+    // Construct the new record to push
     const newRecord = {
-      hospitalID: hospital._id.toString(),
+      hospitalID: hospital?._id?.toString() || '',
       doctorNotes: {
         diagnosis: medicalRecord.doctorNotes?.diagnosis || '',
         treatmentPlan: medicalRecord.doctorNotes?.treatmentPlan || '',
-        prescriptions,
       },
+      prescription: prescriptionData,
       labResults,
     };
 
@@ -583,18 +573,20 @@ const syncToCentralPatientHistory = async (record) => {
       bloodGroup: patient.bloodGroup || null,
       records: [newRecord],
     };
-    console.log(newRecord);
 
     let responseData;
     const existingPatient = await CenteralPatientHistory.findOne({ faydaID: patient.faydaID });
 
     if (!existingPatient) {
+      // Create a new patient history
       responseData = await CenteralPatientHistory.create(payload);
     } else {
+      // Update existing patient history
       existingPatient.records.push(newRecord);
       responseData = await existingPatient.save();
     }
 
+    // Update MedicalRecord to reflect sync status
     await MedicalRecord.findByIdAndUpdate(recordId, {
       syncedToCentral: true,
       lastSyncedAt: new Date(),
@@ -626,7 +618,6 @@ const syncToCentralPatientHistory = async (record) => {
 const updateMedicalRecord = async (req, res) => {
   try {
     const { recordId } = req.params;
- 
     const doctorId = req.user?._id;
     const { diagnosis, treatmentPlan, vitals } = req.body;
 
@@ -638,27 +629,10 @@ const updateMedicalRecord = async (req, res) => {
       });
     }
 
-    const record = await MedicalRecord.findOneAndUpdate(
-      {
-        _id: recordId,
-        $or: [
-          { currentDoctor: doctorId },
-         
-        ]
-      },
-      {
-        $set: {
-          "doctorNotes.diagnosis": diagnosis,
-          "doctorNotes.treatmentPlan": treatmentPlan,
-          "triageData.vitals": vitals || {},
-          status: "Completed",
-          updatedAt: new Date()
-        }
-      },
-      { new: true, runValidators: true }
-    )
-    .populate('patientID', 'faydaID firstName lastName')
-    .populate('currentDoctor', 'firstName lastName');
+    const record = await MedicalRecord.findOne({
+      _id: recordId,
+      currentDoctor: doctorId
+    });
 
     if (!record) {
       return res.status(404).json({ 
@@ -666,12 +640,28 @@ const updateMedicalRecord = async (req, res) => {
         message: "Record not found or unauthorized" 
       });
     }
-    syncToCentralPatientHistory(record);
+
+    // Update values
+    record.doctorNotes.diagnosis = diagnosis;
+    record.doctorNotes.treatmentPlan = treatmentPlan;
+    record.triageData.vitals = vitals || {};
+    record.status = "Completed";
+    record.updatedAt = new Date();
+
+    await record.save();
+
+    const populatedRecord = await MedicalRecord.findById(record._id)
+      .populate('patientID', 'faydaID firstName lastName')
+      .populate('currentDoctor', 'firstName lastName')
+      .populate('doctorNotes.prescriptions')
+      .populate('labRequests');
+
+    syncToCentralPatientHistory(populatedRecord);
 
     res.status(200).json({ 
       success: true,
       message: "Record updated successfully",
-      data: record 
+      data: populatedRecord
     });
   } catch (error) {
     console.error("Error in updateMedicalRecord:", error);
@@ -680,7 +670,8 @@ const updateMedicalRecord = async (req, res) => {
       message: "Server error updating record" 
     });
   }
-}
+};
+
 
 
 const createLabRequest = async (req, res) => {
@@ -688,7 +679,6 @@ const createLabRequest = async (req, res) => {
     const { recordId } = req.params;
     const { testType, instructions, urgency } = req.body;
     const doctorId = req.user?._id;
-    console.log("Input - recordId:", recordId, "doctorId:", doctorId);
 
     if (!recordId || !testType) {
       return res.status(400).json({ 
@@ -697,13 +687,11 @@ const createLabRequest = async (req, res) => {
       });
     }
 
-    // Verify medical record belongs to this doctor
     const record = await MedicalRecord.findOne({
       _id: recordId,
       currentDoctor: doctorId,
       status: "InTreatment"
     });
-    console.log("Record found:", record);
 
     if (!record) {
       return res.status(403).json({ 
@@ -723,11 +711,9 @@ const createLabRequest = async (req, res) => {
 
     await newRequest.save();
 
-    // Add reference to the medical record
-    await MedicalRecord.findByIdAndUpdate(
-      recordId,
-      { $addToSet: { labRequests: newRequest._id } }
-    );
+    // Push the lab request to the record
+    record.labRequests.push(newRequest._id);
+    await record.save();
 
     res.status(201).json({ 
       success: true,
@@ -791,8 +777,8 @@ const getPatientLabRequests = async (req, res) => {
  */
 const createPrescription = async (req, res) => {
   try {
-    const {recordId}= req.params
-    const {  medicines, instructions } = req.body;
+    const { recordId } = req.params;
+    const { medicines, instructions } = req.body;
     const doctorId = req.user?._id;
 
     if (!recordId || !medicines || medicines.length === 0) {
@@ -802,7 +788,6 @@ const createPrescription = async (req, res) => {
       });
     }
 
-    // Verify medical record belongs to this doctor
     const record = await MedicalRecord.findOne({
       _id: recordId,
       currentDoctor: doctorId,
@@ -816,7 +801,6 @@ const createPrescription = async (req, res) => {
       });
     }
 
-    // Validate each medicine has required fields
     const validMedicines = medicines.filter(med => 
       med.name && med.dosage && med.frequency && med.duration
     );
@@ -838,13 +822,9 @@ const createPrescription = async (req, res) => {
 
     await newPrescription.save();
 
-    // Add reference to the medical record
-    await MedicalRecord.findByIdAndUpdate(
-      recordId,
-      { 
-        $addToSet: { "doctorNotes.prescriptions": newPrescription._id } 
-      }
-    );
+    // Push the prescription to the record
+    record.doctorNotes.prescriptions.push(newPrescription._id);
+    await record.save();
 
     res.status(201).json({ 
       success: true,

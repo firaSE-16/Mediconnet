@@ -88,75 +88,7 @@ const PatientDetail = () => {
     urgency: "Normal"
   });
 
-  const fetchPatientData = async () => {
-    try {
-      setIsLoading(true);
-
-      const patientRes = await fetch(`${BASE_URL}/patients/${patientId}/profile`, {
-        credentials: "include",
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      if (!patientRes.ok) throw new Error("Failed to fetch patient profile");
-      const patientData = await patientRes.json();
-
-      setPatient(patientData.data.patient);
-      setCurrentRecord(patientData.data.currentVisit);
-
-      const fetchedFaydaID = patientData.data.patient.basicInfo.faydaID;
-      setFaydaID(fetchedFaydaID); // for UI updates
-      console.log("Fayda ID fetched:", fetchedFaydaID);
-
-     
-
-      // Fetch prescriptions and labs if currentVisit exists
-      if (patientData.data.currentVisit) {
-        const recordId = patientData.data.currentVisit.recordId;
-
-        const prescriptionsRes = await fetch(`${BASE_URL}/records/${recordId}/prescriptions`, {
-          credentials: "include",
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        if (!prescriptionsRes.ok) throw new Error("Failed to fetch prescriptions");
-        const prescriptionsData = await prescriptionsRes.json();
-        setPrescriptions(prescriptionsData.data || []);
-
-        const labsRes = await fetch(`${BASE_URL}/records/${recordId}/lab-requests`, {
-          credentials: "include",
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        if (!labsRes.ok) throw new Error("Failed to fetch lab requests");
-        const labsData = await labsRes.json();
-        setLabRequests(labsData.data || []);
-      }
-
-      if (patientData.data.currentVisit?.status === "InTreatment") {
-        setRecordForm({
-          diagnosis: patientData.data.currentVisit.doctorNotes?.diagnosis || "",
-          treatmentPlan: patientData.data.currentVisit.doctorNotes?.treatmentPlan || "",
-          vitals: patientData.data.currentVisit.triageData?.vitals || {
-            bloodPressure: "",
-            heartRate: "",
-            oxygenSaturation: ""
-          }
-        });
-      }
-
-    } catch (error) {
-      console.error("Fetch error:", error);
-      toast.error(error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchCentralMedicalHistory = async (id) => {
+const fetchCentralMedicalHistory = async (id) => {
   if (!id) return;
   try {
     const historyRes = await fetch(`http://localhost:5500/api/central-history/records/${id}`, {
@@ -167,110 +99,81 @@ const PatientDetail = () => {
     });
 
     if (!historyRes.ok) throw new Error("Failed to fetch medical history");
-
     const historyData = await historyRes.json();
-
-    // Set entire patient object or just records based on your use
     setMedicalHistory(historyData.patient.records || []);
   } catch (error) {
     console.error("Error fetching medical history:", error);
   }
 };
 
-
- 
-  useEffect(() => {
-  const fetchPatientData = async () => {
-    try {
-      setIsLoading(true);
-
-      const patientRes = await fetch(`${BASE_URL}/patients/${patientId}/profile`, {
-        credentials: "include",
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      if (!patientRes.ok) throw new Error("Failed to fetch patient profile");
-      const patientData = await patientRes.json();
-
-      setPatient(patientData.data.patient);
-      setCurrentRecord(patientData.data.currentVisit);
-
-      const fetchedFaydaID = patientData.data.patient.basicInfo.faydaID;
-      setFaydaID(fetchedFaydaID); // for UI updates
-      console.log("Fayda ID fetched:", fetchedFaydaID);
-
-      // Now fetch central medical history after getting faydaID
-      fetchCentralMedicalHistory(fetchedFaydaID);
-
-      // Fetch prescriptions and labs if currentVisit exists
-      if (patientData.data.currentVisit) {
-        const recordId = patientData.data.currentVisit.recordId;
-
-        const prescriptionsRes = await fetch(`${BASE_URL}/records/${recordId}/prescriptions`, {
-          credentials: "include",
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        if (!prescriptionsRes.ok) throw new Error("Failed to fetch prescriptions");
-        const prescriptionsData = await prescriptionsRes.json();
-        setPrescriptions(prescriptionsData.data || []);
-
-        const labsRes = await fetch(`${BASE_URL}/records/${recordId}/lab-requests`, {
-          credentials: "include",
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        if (!labsRes.ok) throw new Error("Failed to fetch lab requests");
-        const labsData = await labsRes.json();
-        setLabRequests(labsData.data || []);
-      }
-
-      if (patientData.data.currentVisit?.status === "InTreatment") {
-        setRecordForm({
-          diagnosis: patientData.data.currentVisit.doctorNotes?.diagnosis || "",
-          treatmentPlan: patientData.data.currentVisit.doctorNotes?.treatmentPlan || "",
-          vitals: patientData.data.currentVisit.triageData?.vitals || {
-            bloodPressure: "",
-            heartRate: "",
-            oxygenSaturation: ""
-          }
-        });
-      }
-
-    } catch (error) {
-      console.error("Fetch error:", error);
-      toast.error(error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchCentralMedicalHistory = async (id) => {
-  if (!id) return;
+const fetchPatientData = async () => {
   try {
-    const historyRes = await fetch(`http://localhost:5500/api/central-history/records/${id}`, {
+    setIsLoading(true);
+    const patientRes = await fetch(`${BASE_URL}/patients/${patientId}/profile`, {
       credentials: "include",
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     });
 
-    if (!historyRes.ok) throw new Error("Failed to fetch medical history");
+    if (!patientRes.ok) throw new Error("Failed to fetch patient profile");
+    const patientData = await patientRes.json();
 
-    const historyData = await historyRes.json();
+    setPatient(patientData.data.patient);
+    setCurrentRecord(patientData.data.currentVisit);
 
-    // Set entire patient object or just records based on your use
-    setMedicalHistory(historyData.patient.records || []);
+    const fetchedFaydaID = patientData.data.patient.basicInfo.faydaID;
+    setFaydaID(fetchedFaydaID);
+    console.log("Fayda ID fetched:", fetchedFaydaID);
+
+    // Fetch central medical history after getting faydaID
+    await fetchCentralMedicalHistory(fetchedFaydaID);
+
+    // Rest of your existing fetch logic...
+    if (patientData.data.currentVisit) {
+      const recordId = patientData.data.currentVisit.recordId;
+
+      const prescriptionsRes = await fetch(`${BASE_URL}/records/${recordId}/prescriptions`, {
+        credentials: "include",
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (!prescriptionsRes.ok) throw new Error("Failed to fetch prescriptions");
+      const prescriptionsData = await prescriptionsRes.json();
+      setPrescriptions(prescriptionsData.data || []);
+
+      const labsRes = await fetch(`${BASE_URL}/records/${recordId}/lab-requests`, {
+        credentials: "include",
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (!labsRes.ok) throw new Error("Failed to fetch lab requests");
+      const labsData = await labsRes.json();
+      setLabRequests(labsData.data || []);
+    }
+
+    if (patientData.data.currentVisit?.status === "InTreatment") {
+      setRecordForm({
+        diagnosis: patientData.data.currentVisit.doctorNotes?.diagnosis || "",
+        treatmentPlan: patientData.data.currentVisit.doctorNotes?.treatmentPlan || "",
+        vitals: patientData.data.currentVisit.triageData?.vitals || {
+          bloodPressure: "",
+          heartRate: "",
+          oxygenSaturation: ""
+        }
+      });
+    }
   } catch (error) {
-    console.error("Error fetching medical history:", error);
+    console.error("Fetch error:", error);
+    toast.error(error.message);
+  } finally {
+    setIsLoading(false);
   }
 };
 
-
+useEffect(() => {
   fetchPatientData();
 }, [patientId]);
 
@@ -300,6 +203,8 @@ const PatientDetail = () => {
       const data = await response.json();
       setCurrentRecord(data.data);
       toast.success("Treatment started successfully");
+        fetchPatientData();
+
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -341,6 +246,7 @@ const PatientDetail = () => {
       const data = await response.json();
       setCurrentRecord(data.data);
       toast.success("Medical record updated successfully");
+      fetchPatientData();
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -408,6 +314,7 @@ const PatientDetail = () => {
       });
       
       toast.success("Prescription created successfully");
+      fetchPatientData();
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -619,16 +526,13 @@ const PatientDetail = () => {
           <User className="h-4 w-4 mr-2" />
           <span className="font-medium">Patient Profile</span>
         </TabsTrigger>
-        <TabsTrigger
-          value="records"
-          className="data-[state=active]:shadow-sm data-[state=active]:bg-white py-1"
-        >
-          <ClipboardCheck className="h-4 w-4 mr-2" />
-          <span className="font-medium" onClick={fetchPatientData}>
-  Current Record
-</span>
-
-        </TabsTrigger>
+      <TabsTrigger
+  value="records"
+  className="data-[state=active]:shadow-sm data-[state=active]:bg-white py-1"
+>
+  <ClipboardCheck className="h-4 w-4 mr-2" />
+  <span className="font-medium">Current Record</span>
+</TabsTrigger>
         <TabsTrigger
           value="history"
           className="data-[state=active]:shadow-sm data-[state=active]:bg-white py-1"
