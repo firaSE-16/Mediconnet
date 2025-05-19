@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import NotFound from "./pages/NotFound";
+import NotFound from "./pages/Notfound";
 
 // System Admin pages
 import AddAdmin from "./pages/admin/AddAdmin";
