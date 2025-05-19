@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
-const Hospital = require("../models/Hospital");
+const Hospital = require("../models/hospital");
 const HospitalAdministrator = require("../models/HospitalAdministrator");
 const User = require("../models/user");
 const crypto = require('crypto');

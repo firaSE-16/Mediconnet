@@ -1,7 +1,7 @@
-const Patient = require('../models/Patient')
+const Patient = require('../models/patient')
 const MedicalRecord = require('../models/MedicalRecord')
-const Doctor = require('../models/Doctor')
-const Triage = require('../models/Triage')
+const Doctor = require('../models/doctor')
+const Triage = require('../models/triage')
 
 // Get triage dashboard stats
 exports.getTriageStats = async (req, res) => {

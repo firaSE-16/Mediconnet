@@ -1,5 +1,5 @@
 // middleware/authMiddleware.js
-const Hospital = require('../models/Hospital');
+const Hospital = require('../models/hospital');
 
 const authenticateHospital = async (req, res, next) => {
   try {

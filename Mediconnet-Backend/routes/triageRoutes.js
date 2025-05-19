@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const triageController = require('../controllers/triageController')
-const authMiddleware = require('../middleware/authMiddleware')
+const authMiddleware = require('../middleware/authmiddleware')
 
 // Dashboard stats
 router.get('/stats', authMiddleware, triageController.getTriageStats)

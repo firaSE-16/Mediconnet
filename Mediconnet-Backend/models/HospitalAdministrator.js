@@ -1,4 +1,4 @@
-const User = require('./User');
+const User = require('./user');
 const mongoose = require('mongoose');
 
 const hospitalAdministratorSchema = new mongoose.Schema({

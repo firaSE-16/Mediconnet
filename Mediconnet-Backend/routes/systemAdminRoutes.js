@@ -9,7 +9,7 @@ const {
   getAdminSummary,
   getStaffDetails
 } = require("../controllers/systemAdminContoller");
-const authMiddleware = require("../middleware/authMiddleware");
+const authMiddleware = require("../middleware/authmiddleware");
 
 router.get("/summaryHospitals", authMiddleware,getAdminSummary);
 

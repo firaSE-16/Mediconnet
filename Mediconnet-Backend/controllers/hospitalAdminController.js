@@ -1,13 +1,13 @@
-const User = require("../models/User");
-const Doctor = require("../models/Doctor");
+const User = require("../models/user");
+const Doctor = require("../models/doctor");
 const LabTechnician = require("../models/LabTechnician");
-const Pharmacist = require("../models/Pharmacist");
-const Receptionist = require("../models/Receptionist");
-const Triage = require("../models/Triage");
-const Patient = require("../models/Patient");
+const Pharmacist = require("../models/pharmacist");
+const Receptionist = require("../models/receptionist");
+const Triage = require("../models/triage");
+const Patient = require("../models/patient");
 const mongoose = require("mongoose")
 const bcrypt = require("bcrypt");
-const Hospital = require("../models/Hospital");
+const Hospital = require("../models/hospital");
 const HospitalAdministrator = require("../models/HospitalAdministrator");
 const addStaffAccount = async (req, res) => {
   try {

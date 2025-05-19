@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const doctorController = require('../controllers/DoctorController');
-const authMiddleware = require("../middleware/authMiddleware");
+const authMiddleware = require("../middleware/authmiddleware");
 
 // Doctor profile routes
 router.get('/getStaffAccount/:id', authMiddleware, doctorController.getStaffAccount);

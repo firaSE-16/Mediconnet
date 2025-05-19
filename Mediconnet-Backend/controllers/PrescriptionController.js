@@ -1,4 +1,4 @@
-const Prescription = require('../models/Prescription');
+const Prescription = require('../models/prescription');
 // Fetch prescriptions based on patient or doctor
 const getPrescriptions = async (req, res) => {
     try {
