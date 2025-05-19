@@ -22,8 +22,8 @@ import ViewRecords from "./pages/hospitalAdmin/ViewRecords";
 import ReceptionistDashboard from "./pages/receptionist/Dashboard";
 
 // Doctor pages
-import DoctorDashboard from "./pages/doctor/Dashboard";
-import AssignedRecords from "./pages/doctor/AssignedRecords";
+import DoctorDashboard from "./pages/Doctor/Dashboard";
+import AssignedRecords from "./pages/Doctor/AssignedRecords";
 import PatientDetail from "./pages/Doctor/PatientDetail";
 import StaffDetail from "./pages/admin/StaffDetail";
 
