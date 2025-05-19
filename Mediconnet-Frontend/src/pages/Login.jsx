@@ -19,7 +19,7 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@
 import getUser from "@/lib/getUser";
 import { roleRedirects } from "@/lib/role";
 import { useUser } from "@/context/UserContext";
-import hospitalImage from "@/images/hospital.jpg";
+import hospitalImage from "@/Images/hospital.jpg"; // Adjust the path as necessary
 
 const roles = [
   "Admin",
