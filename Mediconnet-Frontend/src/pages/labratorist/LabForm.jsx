@@ -17,7 +17,7 @@ import {
 } from '@mui/material';
 import axios from 'axios';
 import { format } from 'date-fns';
-const BASE_URL = "http://localhost:5500";
+const BASE_URL = "https://mediconnet-backend.onrender.com";
 
 const LabForm = () => {
   const { id } = useParams();
