@@ -19,7 +19,7 @@ export default function StaffDashboard() {
         setLoading(true)
         
         // 1. Fetch user info to get userId
-        const userRes = await fetch(`http://localhost:5500/api/auth/me`, {
+        const userRes = await fetch(`https://mediconnet-backend.onrender.com/api/auth/me`, {
           credentials: "include",
         })
         if (!userRes.ok) throw new Error("Failed to fetch user info")
@@ -27,7 +27,7 @@ export default function StaffDashboard() {
 
         // 2. Fetch user details with hospital info
         const detailsRes = await fetch(
-          `http://localhost:5500/api/hospital-admin/getStaffAccount/${userInfo.userId}`,
+          `https://mediconnet-backend.onrender.com/api/hospital-admin/getStaffAccount/${userInfo.userId}`,
           { credentials: "include" }
         )
         if (!detailsRes.ok) throw new Error("Failed to fetch user details")
