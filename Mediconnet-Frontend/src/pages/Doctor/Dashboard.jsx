@@ -35,14 +35,14 @@ const DoctorDashboard = () => {
         setLoading(true);
         
         // Fetch doctor's basic information
-        const userRes = await fetch(`http://localhost:5500/api/auth/me`, {
+        const userRes = await fetch(`https://mediconnet-frontend.onrender.com/api/auth/me`, {
           credentials: "include",
         });
         if (!userRes.ok) throw new Error("Failed to fetch user info");
         const userData = await userRes.json();
 
         const doctorRes = await fetch(
-          `http://localhost:5500/api/doctors/getStaffAccount/${userData.userId}`,
+          `https://mediconnet-frontend.onrender.com/api/doctors/getStaffAccount/${userData.userId}`,
           { credentials: "include" }
         );
         if (!doctorRes.ok) throw new Error("Failed to fetch doctor info");
@@ -52,7 +52,7 @@ const DoctorDashboard = () => {
         // Fetch all assigned patients in parallel
         if (doctorData.assignedPatientID?.length > 0) {
           const patientPromises = doctorData.assignedPatientID.map(patientId => 
-            fetch(`http://localhost:5500/api/patients/${patientId.$oid}`, {
+            fetch(`https://mediconnet-frontend.onrender.com/api/patients/${patientId.$oid}`, {
               credentials: "include"
             }).then(res => {
               if (!res.ok) throw new Error(`Failed to fetch patient ${patientId.$oid}`);
