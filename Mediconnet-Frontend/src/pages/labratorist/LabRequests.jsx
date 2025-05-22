@@ -21,7 +21,7 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import axios from 'axios';
 import { format } from 'date-fns';
-const BASE_URL = "http://localhost:5500";
+const BASE_URL = "https://mediconnet-backend.onrender.com";
 
 const LabRequests = () => {
   const [requests, setRequests] = useState([]);
