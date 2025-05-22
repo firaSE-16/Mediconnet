@@ -43,7 +43,7 @@ import { ChevronLeft } from "lucide-react";
 import { toast } from "react-toastify"
 import { Skeleton } from "@/components/ui/skeleton";
 
-const BASE_URL = "http://localhost:5500/api/doctors";
+const BASE_URL = "https://mediconnet-frontend.onrender.com/api/doctors";
 
 // Helper function to safely format dates
 const safeFormat = (date, formatStr) => {
@@ -91,7 +91,7 @@ const PatientDetail = () => {
 const fetchCentralMedicalHistory = async (id) => {
   if (!id) return;
   try {
-    const historyRes = await fetch(`http://localhost:5500/api/central-history/records/${id}`, {
+    const historyRes = await fetch(`https://mediconnet-frontend.onrender.com/api/central-history/records/${id}`, {
       credentials: "include",
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
