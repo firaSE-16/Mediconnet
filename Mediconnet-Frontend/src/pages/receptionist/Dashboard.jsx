@@ -36,14 +36,14 @@ const ReceptionistDashboard = () => {
         setLoading(true);
         
         // Fetch receptionist's basic information
-        const userRes = await fetch(`http://localhost:5500/api/auth/me`, {
+        const userRes = await fetch(`https://mediconnet-backend.onrender.com/api/auth/me`, {
           credentials: "include",
         });
         if (!userRes.ok) throw new Error("Failed to fetch user info");
         const userData = await userRes.json();
 
         const receptionistRes = await fetch(
-          `http://localhost:5500/api/reception/getStaffAccount/${userData.userId}`,
+          `https://mediconnet-backend.onrender.com/api/reception/getStaffAccount/${userData.userId}`,
           { credentials: "include" }
         );
         if (!receptionistRes.ok) throw new Error("Failed to fetch receptionist info");
