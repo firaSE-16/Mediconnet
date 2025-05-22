@@ -37,7 +37,7 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const { data } = await axios.get("https://mediconnet-frontend.onrender.com/api/system-admin/summaryHospitals", {
+        const { data } = await axios.get("https://mediconnet-backend.onrender.com/api/system-admin/summaryHospitals", {
           withCredentials: true,
         });
         
