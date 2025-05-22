@@ -4,7 +4,7 @@ import { Box, Typography, Card, CardContent, Grid, Avatar, Paper, Button } from 
 import MedicalServicesIcon from '@mui/icons-material/MedicalServices';
 import PersonIcon from '@mui/icons-material/Person';
 import axios from 'axios';
-const BASE_URL = "http://localhost:5500";
+const BASE_URL = "https://mediconnet-backend.onrender.com";
 
 const DashboardLaboratorist = () => {
   const [technicianData, setTechnicianData] = useState(null);
