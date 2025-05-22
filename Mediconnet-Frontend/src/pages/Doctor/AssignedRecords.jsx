@@ -24,7 +24,7 @@ import { Badge } from "../../components/ui/badge";
 import { Skeleton } from "../../components/ui/skeleton";
 import { toast } from "react-toastify";
 
-const BASE_URL = "http://localhost:5500";
+const BASE_URL = "https://mediconnet-backend.onrender.com";
 
 const AssignedRecords = () => {
   const [doctorInfo, setDoctorInfo] = useState(null);
